@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lagrangian, Hamiltonian & Symplectic Integrator Derivation</title>
+  <!-- KaTeX CSS & JS for Mathematical Typesetting -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ]
+    });"></script>
+  <style>
+    body {
+      font-family: "Times New Roman", Times, Georgia, serif;
+      background-color: #f4f6f9;
+      color: #111827;
+      line-height: 1.75;
+      margin: 0;
+      padding: 40px 20px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 48px 56px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+    }
+    h1 {
+      font-size: 1.9rem;
+      color: #0f172a;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 12px;
+      margin-top: 0;
+      margin-bottom: 24px;
+    }
+    h2 {
+      font-size: 1.45rem;
+      color: #1e3a8a;
+      margin-top: 36px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 6px;
+    }
+    h3 {
+      font-size: 1.2rem;
+      color: #0f172a;
+      margin-top: 24px;
+      margin-bottom: 10px;
+    }
+    p, li {
+      font-size: 1.12rem;
+      color: #1f2937;
+    }
+    ol, ul {
+      padding-left: 24px;
+    }
+    li {
+      margin-bottom: 12px;
+    }
+    .note-box {
+      background-color: #f8fafc;
+      border-left: 4px solid #0072B2;
+      padding: 16px 20px;
+      margin: 24px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .katex-display {
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Theoretical Formulation: Undamped Nonlinear Pendulum</h1>
+    <p>
+      For the large-angle nonlinear pendulum simulated in our numerical experiments (bob mass $m$, rod length $L$, normalized to natural units $m = 1$, $L = 1$, and $g = 1$), the complete analytical progression from <strong>Lagrangian Mechanics</strong> to <strong>Hamiltonian Mechanics</strong> and the <strong>Symplectic Integrator (Velocity Verlet)</strong> is detailed below.
+    </p>
+
+    <!-- Section 1 -->
+    <h2>1. Lagrangian Formulation</h2>
+    <ol>
+      <li>
+        <strong>Generalized Coordinate and Energy Definitions:</strong><br>
+        Select the unconstrained angular displacement $\theta$ as the generalized coordinate (with the zero of potential energy at the lowest equilibrium point):
+        <ul>
+          <li>Kinetic Energy:
+            $$T = \frac{1}{2}m(L\dot{\theta})^2 = \frac{1}{2}\dot{\theta}^2 \quad (\text{setting } m = 1,\; L = 1)$$
+          </li>
+          <li>Gravitational Potential Energy:
+            $$V(\theta) = mgL(1 - \cos\theta) = 1 - \cos\theta \quad (\text{setting } m = 1,\; g = 1,\; L = 1)$$
+          </li>
+        </ul>
+      </li>
+      <li>
+        <strong>Constructing the Lagrangian:</strong>
+        $$\mathcal{L}(\theta, \dot{\theta}) = T - V = \frac{1}{2}\dot{\theta}^2 - (1 - \cos\theta)$$
+      </li>
+      <li>
+        <strong>Euler–Lagrange Equation:</strong>
+        $$\frac{d}{dt}\left(\frac{\partial \mathcal{L}}{\partial \dot{\theta}}\right) - \frac{\partial \mathcal{L}}{\partial \theta} = 0$$
+        Evaluating the partial derivatives yields:
+        $$\frac{\partial \mathcal{L}}{\partial \dot{\theta}} = \dot{\theta}, \qquad \frac{\partial \mathcal{L}}{\partial \theta} = -\sin\theta$$
+        Substituting these into the Euler–Lagrange equation gives the second-order nonlinear equation of motion:
+        $$\ddot{\theta} + \sin\theta = 0$$
+      </li>
+    </ol>
+
+    <!-- Section 2 -->
+    <h2>2. Hamiltonian Formulation</h2>
+    <ol>
+      <li>
+        <strong>Legendre Transformation &amp; Canonical Momentum:</strong><br>
+        Define the canonical angular momentum $p_\theta$ conjugate to $\theta$:
+        $$p_\theta \equiv \frac{\partial \mathcal{L}}{\partial \dot{\theta}} = \dot{\theta}$$
+        <em>(Note: In dimensionless natural units, the canonical momentum $p_\theta$ is numerically equal to the angular velocity $\omega$.)</em>
+      </li>
+      <li>
+        <strong>Constructing the Hamiltonian:</strong>
+        $$H(\theta, p_\theta) = p_\theta \dot{\theta} - \mathcal{L}(\theta, \dot{\theta}) = p_\theta^2 - \left[\frac{1}{2}p_\theta^2 - (1 - \cos\theta)\right] = \frac{1}{2}p_\theta^2 + (1 - \cos\theta)$$
+        Because this is a separable Hamiltonian system, it decomposes cleanly into pure kinetic and pure potential energy terms:
+        $$H(\theta, p_\theta) = T(p_\theta) + V(\theta)$$
+      </li>
+      <li>
+        <strong>Hamilton's Canonical Equations:</strong>
+        $$\begin{cases}
+        \dfrac{d\theta}{dt} = \dfrac{\partial H}{\partial p_\theta} = p_\theta \\[12pt]
+        \dfrac{dp_\theta}{dt} = -\dfrac{\partial H}{\partial \theta} = -\sin\theta
+        \end{cases}$$
+        This coupled first-order system governs the phase-space state vector $\mathbf{y} = [\theta, p_\theta]^T$ implemented in our numerical solver.
+      </li>
+    </ol>
+
+    <!-- Section 3 -->
+    <h2>3. Symplectic Integrator (Velocity Verlet): Derivation &amp; Proof</h2>
+
+    <h3>3.1 Operator Splitting Derivation (Kick–Drift–Kick)</h3>
+    <p>
+      Time evolution in Hamiltonian mechanics can be expressed via the Liouville operator $\frac{d\mathbf{y}}{dt} = \{\mathbf{y}, H\} = (\hat{D}_T + \hat{D}_V)\mathbf{y}$, which splits into two exactly solvable sub-flows:
+    </p>
+    <ul>
+      <li>
+        <strong>Pure Kinetic Flow (Drift — position advances linearly with constant momentum):</strong>
+        $$\hat{D}_T: \quad \frac{d\theta}{dt} = p_\theta, \quad \frac{dp_\theta}{dt} = 0 \implies \begin{cases} \theta(t + \tau) = \theta(t) + \tau p_\theta(t) \\ p_\theta(t + \tau) = p_\theta(t) \end{cases}$$
+      </li>
+      <li>
+        <strong>Pure Potential Flow (Kick — momentum updates under torque at fixed position):</strong>
+        $$\hat{D}_V: \quad \frac{d\theta}{dt} = 0, \quad \frac{dp_\theta}{dt} = -\sin\theta \implies \begin{cases} \theta(t + \tau) = \theta(t) \\ p_\theta(t + \tau) = p_\theta(t) - \tau \sin\theta(t) \end{cases}$$
+      </li>
+    </ul>
+    <p>
+      To achieve second-order accuracy and time-reversibility, we apply <strong>Symmetric Strang Splitting</strong> over a single time step $h$ (Half-Kick $\rightarrow$ Full-Drift $\rightarrow$ Half-Kick):
+    </p>
+    <ol>
+      <li>
+        <strong>Half-step momentum update ($\tau = h/2$):</strong>
+        $$p_{n+1/2} = p_n - \frac{h}{2}\sin\theta_n$$
+      </li>
+      <li>
+        <strong>Full-step position update ($\tau = h$):</strong>
+        $$\theta_{n+1} = \theta_n + h\,p_{n+1/2} = \theta_n + h\,p_n - \frac{h^2}{2}\sin\theta_n$$
+      </li>
+      <li>
+        <strong>Half-step momentum update ($\tau = h/2$):</strong>
+        $$p_{n+1} = p_{n+1/2} - \frac{h}{2}\sin\theta_{n+1} = p_n - \frac{h}{2}\big(\sin\theta_n + \sin\theta_{n+1}\big)$$
+      </li>
+    </ol>
+    <p>
+      Defining the angular acceleration $\alpha(\theta) = -\sin\theta$, steps 2 and 3 yield the standard <strong>Velocity Verlet</strong> update equations:
+    </p>
+    $$\begin{aligned}
+    \theta_{n+1} &= \theta_n + p_n h + \frac{1}{2}\alpha(\theta_n) h^2 \\
+    p_{n+1} &= p_n + \frac{1}{2}\big[\alpha(\theta_n) + \alpha(\theta_{n+1})\big]h
+    \end{aligned}$$
+
+    <h3>3.2 Mathematical Proof of Symplecticity</h3>
+    <p>
+      In a two-dimensional phase space $(\theta, p_\theta)$, a numerical map $\Phi_h: (\theta_n, p_n) \mapsto (\theta_{n+1}, p_{n+1})$ is <strong>symplectic</strong> if and only if its Jacobian determinant equals unity ($\det(J) = 1$), ensuring exact preservation of phase-space area (discrete Liouville's theorem).
+    </p>
+    <p>Evaluating the Jacobian matrix of each sub-step:</p>
+    <ul>
+      <li>
+        <strong>Step 1 (Half-Kick):</strong>
+        $$J_1 = \frac{\partial(\theta_n, p_{n+1/2})}{\partial(\theta_n, p_n)} = \begin{bmatrix} 1 & 0 \\ -\frac{h}{2}\cos\theta_n & 1 \end{bmatrix} \implies \det(J_1) = 1$$
+      </li>
+      <li>
+        <strong>Step 2 (Full-Drift):</strong>
+        $$J_2 = \frac{\partial(\theta_{n+1}, p_{n+1/2})}{\partial(\theta_n, p_{n+1/2})} = \begin{bmatrix} 1 & h \\ 0 & 1 \end{bmatrix} \implies \det(J_2) = 1$$
+      </li>
+      <li>
+        <strong>Step 3 (Half-Kick):</strong>
+        $$J_3 = \frac{\partial(\theta_{n+1}, p_{n+1})}{\partial(\theta_{n+1}, p_{n+1/2})} = \begin{bmatrix} 1 & 0 \\ -\frac{h}{2}\cos\theta_{n+1} & 1 \end{bmatrix} \implies \det(J_3) = 1$$
+      </li>
+    </ul>
+    <p>
+      By the chain rule, the total Jacobian determinant of the composite Velocity Verlet step is:
+    </p>
+    $$\det(J_{\text{Verlet}}) = \det(J_3)\det(J_2)\det(J_1) = 1 \times 1 \times 1 = 1$$
+
+    <div class="note-box">
+      <strong>Physical Consequence (Shadow Hamiltonian Conservation):</strong><br>
+      Because $\det(J_{\text{Verlet}}) = 1$, Velocity Verlet strictly preserves phase-space area and conserves a nearby modified <em>Shadow Hamiltonian</em> $\tilde{H} = H + \mathcal{O}(h^2)$. Consequently, as demonstrated in Figure 4, the total energy $E(t)$ exhibits bounded periodic oscillations around $E_0 = 1.500$ over arbitrarily long integration times, avoiding the secular numerical damping inherent to non-symplectic RK4.
+    </div>
+  </div>
+</body>
+</html>
